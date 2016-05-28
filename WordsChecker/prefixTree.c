@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "prefixTree.h"
 
@@ -15,17 +16,16 @@
 typedef struct treeNode
 {
 	char* key;
-	size_t childsBlockIndex;
-	size_t bucketIndex;
+	int32_t childsBlockIndex;
+	ValueType value;
 } treeNode;
 
 typedef struct prefixTree
 {
-	size_t valuesSize;
+	ValueType emptyKeyValue;
+	size_t itemsCount;
 	size_t blocksCount;
 	size_t blocksRezerved;
-	size_t itemsCount;
-	ValueType* values;
 	treeNode* nodes;
 } prefixTree;
 
@@ -33,7 +33,7 @@ size_t allocateBlock(prefixTree* tree)
 {
 	if (tree->blocksRezerved == tree->blocksCount)
 	{
-		size_t newBlocksRezerved = max(tree->blocksRezerved * 8 / 5, 2);
+		size_t newBlocksRezerved = max(tree->blocksRezerved * 9 / 5, 2);
 
 		void* newNodes = realloc(tree->nodes, newBlocksRezerved * 16 * sizeof(treeNode));
 		if (newNodes == NULL)
@@ -58,12 +58,8 @@ PrefixTree *prefixTree_create()
 	if (!tree)
 		return NULL;
 
-	tree->itemsCount = 0;
 	tree->blocksCount = 1;
-	tree->blocksRezerved = 10000;
-
-	tree->valuesSize = 4;
-	tree->values = (ValueType*)calloc(tree->valuesSize, sizeof(ValueType));
+	tree->blocksRezerved = 1000;
 
 	tree->nodes = (treeNode*)calloc(tree->blocksRezerved * 16, sizeof(treeNode));
 
@@ -76,7 +72,7 @@ void prefixTree_free(PrefixTree *ptTree, _Bool fFreeKeys)
 		return;
 
 	prefixTree *tree = ptTree;
-	
+
 	if (fFreeKeys)
 	{
 		for (size_t i = 0; i < tree->blocksCount * 16; i++)
@@ -84,7 +80,6 @@ void prefixTree_free(PrefixTree *ptTree, _Bool fFreeKeys)
 	}
 
 	free(tree->nodes);
-	free(tree->values);
 	free(tree);
 }
 
@@ -96,13 +91,15 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 	if (!sKey)
 		return false;
 
-	prefixTree *tree = ptTree;
-
 	size_t keyLen = strlen(sKey);
+
+	prefixTree *tree = ptTree;
+	char *sKey_i = sKey;
+	ValueType value_i = value;
 
 	if (keyLen == 0)
 	{
-		tree->values[0] = value;
+		tree->emptyKeyValue = value;
 		tree->itemsCount |= EMPTY_ITEM_MASK;
 		return true;
 	}
@@ -115,15 +112,15 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 		size_t blockIndex = 0;
 		for (size_t i = 0; i < keyLen * 2; i++)
 		{
-			size_t inBlockI = IN_BLOCK_INDEX(sKey, i);
+			size_t inBlockI = IN_BLOCK_INDEX(sKey_i, i);
 
 			treeNode *node = &tree->nodes[blockIndex * 16 + inBlockI];
 
 			if (node->key != NULL)
 			{
-				if (strcmp(&node->key[i / 2], &sKey[i / 2]) == 0)
+				if (strcmp(&node->key[i / 2], &sKey_i[i / 2]) == 0)
 				{
-					tree->values[node->bucketIndex] = value;
+					node->value = value_i;
 					return true;
 				}
 				else if (node->childsBlockIndex == 0)
@@ -137,45 +134,67 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 
 					if (strlen(node->key) * 2 - 1 > i)
 					{
+#if 1
 						tree->nodes[newBlockIndex * 16 + IN_BLOCK_INDEX(node->key, i + 1)].key = node->key;
-						tree->nodes[newBlockIndex * 16 + IN_BLOCK_INDEX(node->key, i + 1)].bucketIndex = node->bucketIndex;
+						tree->nodes[newBlockIndex * 16 + IN_BLOCK_INDEX(node->key, i + 1)].value = node->value;
+
+						tree->itemsCount++;
+						node->value = value_i;
+
+						if (fCopyKey)
+						{
+							node->key = calloc(keyLen + 1, sizeof(char));
+							strcpy(node->key, sKey_i);
+						}
+						else
+						{
+							node->key = sKey_i;
+						}
+
+						return true;
+#else						
+						tree->nodes[newBlockIndex * 16 + IN_BLOCK_INDEX(node->key, i + 1)].key = node->key;
+						tree->nodes[newBlockIndex * 16 + IN_BLOCK_INDEX(node->key, i + 1)].value = node->value;
 						node->key = NULL;
-						node->bucketIndex = 0;
+						node->value = NULL;
 
 						tailRecursion = true;
 						break;
+#endif					
 					}
+				}
+				else if (i + 1 == keyLen * 2)
+				{
+					char *nkey = node->key;
+					ValueType nvalue = node->value;
+
+					node->key = sKey_i;
+					node->value = value_i;
+
+					sKey_i = nkey;
+					value_i = nvalue;
+					keyLen = strlen(sKey_i);
+
+					tailRecursion = true;
+					break;
 				}
 			}
 			else
 			{
 				if (node->childsBlockIndex == 0 || (keyLen * 2 - 1) == i)
 				{
-					if (tree->valuesSize <= (tree->itemsCount + 2))
-					{
-						size_t newbucketsSize = max(tree->valuesSize * 8 / 5, 2);
-						void* newValues = realloc(tree->values, sizeof(ValueType) * newbucketsSize);
-						if (newValues == NULL)
-							return false;
-
-						tree->values = newValues;
-						tree->valuesSize = newbucketsSize;
-					}
-
 					tree->itemsCount++;
-					tree->values[tree->itemsCount] = value;
-					
+					node->value = value_i;
+
 					if (fCopyKey)
 					{
 						node->key = calloc(keyLen + 1, sizeof(char));
-						strcpy(node->key, sKey);
+						strcpy(node->key, sKey_i);
 					}
 					else
 					{
-						node->key = sKey;
+						node->key = sKey_i;
 					}
-
-					node->bucketIndex = tree->itemsCount;
 
 					return true;
 				}
@@ -202,9 +221,9 @@ _Bool prefixTree_get(const PrefixTree *ptTree, const char* sKey, ValueType* pVal
 
 	if (keyLen == 0)
 	{
-		if (tree->itemsCount & (1 << (sizeof(size_t) * 8 - 1)))
+		if (tree->itemsCount & EMPTY_ITEM_MASK)
 		{
-			*pValue = tree->values[0];
+			*pValue = tree->emptyKeyValue;
 			return true;
 		}
 
@@ -222,7 +241,7 @@ _Bool prefixTree_get(const PrefixTree *ptTree, const char* sKey, ValueType* pVal
 		{
 			if (strcmp(&node->key[i / 2], &sKey[i / 2]) == 0)
 			{
-				*pValue = tree->values[node->bucketIndex];
+				*pValue = node->value;
 				return true;
 			}
 			else if (node->childsBlockIndex == 0)

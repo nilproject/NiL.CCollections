@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #if _WIN32 || _WIN64
+#include <intrin.h>
 #include <sys\timeb.h>
 #include <Windows.h>
 #endif
@@ -80,8 +81,23 @@ int main()
 		line = fgetline(file);
 		if (line == NULL)
 			break;
-		prefixTree_set(tree, line, (ValueType)linesCount, false);
+
+		if (!prefixTree_set(tree, line, (ValueType)linesCount, false))
+		{
+			printf("\nout-of-memory (%u)", linesCount);
+			getchar();
+			return 1;
+		}
+
 		lines[linesCount++] = line;
+
+		ValueType value;
+		if (!prefixTree_get(tree, line, &value) || (size_t)value != linesCount - 1)
+		{
+			printf("\nERROR!");
+			getchar();
+			return 1;
+		}
 
 		if (linesCount == linesAllocated)
 		{
@@ -100,9 +116,7 @@ int main()
 	for (size_t i = 0; i < linesCount; i++)
 	{
 		ValueType value;
-		prefixTree_get(tree, lines[i], &value);
-
-		if ((size_t)value != i)
+		if (!prefixTree_get(tree, lines[i], &value) || (size_t)value != i)
 		{
 			printf("\nERROR!");
 			getchar();
