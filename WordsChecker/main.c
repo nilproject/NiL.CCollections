@@ -98,7 +98,7 @@ int main()
 			getchar();
 			return 1;
 		}
-
+		
 		if (linesCount == linesAllocated)
 		{
 			lines = realloc(lines, (linesAllocated *= 2) * sizeof(char*));
@@ -126,7 +126,7 @@ int main()
 #if _WIN32 || _WIN64
 	ftime(&bend);
 	time_t time = (bend.time - bstart.time) * 1000 + bend.millitm - bstart.millitm;
-	printf("\nTime: %lu (%f per line)", time, (float)time / linesCount);
+	printf("\nTime: %i (%f per line)", (int32_t)time, (float)time / (float)linesCount);
 #endif
 
 	free(lines);
