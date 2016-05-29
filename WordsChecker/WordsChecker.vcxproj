@@ -22,6 +22,7 @@
     <ProjectGuid>{D56EE536-AEE6-48EA-88B0-0C4791CE21EE}</ProjectGuid>
     <RootNamespace>WordsChecker</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>Collections</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
