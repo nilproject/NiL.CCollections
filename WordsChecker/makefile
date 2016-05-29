@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-c -O2 -std=c99
-SOURCES=prefixTree.c main.c
+SOURCES=prefixTree.c HashMap.c main.c
 OBJECTS=$(SOURCES:.c=.o)
 OUTPUT=wordchecker.a
 

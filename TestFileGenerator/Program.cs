@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,8 +12,8 @@ namespace TestFileGenerator
     {
         static void Main(string[] args)
         {
-            using (var file = new FileStream("words.txt", FileMode.Create))
-            using (var writer = new StreamWriter(file))
+            //using (var file = new FileStream("words.txt", FileMode.Create))
+            //using (var writer = new StreamWriter(file))
             {
                 var words = new HashSet<string>();
                 var stringBuilder = new StringBuilder();
@@ -36,11 +37,19 @@ namespace TestFileGenerator
                     else
                     {
                         words.Add(word);
-                        writer.Write(word);
-                        writer.Write('\n');
+                        //writer.Write(word);
+                        //writer.Write('\n');
                         size += len + 1;
                     }
                 }
+
+                var sw = Stopwatch.StartNew();
+                foreach (var word in words)
+                {
+                    words.Contains(word);
+                }
+                Console.WriteLine(sw.Elapsed);
+                Console.WriteLine((sw.Elapsed.TotalMilliseconds / (float)words.Count).ToString("F10"));
             }
         }
     }

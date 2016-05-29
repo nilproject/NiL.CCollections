@@ -9,7 +9,9 @@
 
 #include <string.h>
 #include <time.h>
+
 #include "prefixTree.h"
+#include "HashMap.h"
 
 bool gotoxy(short x, short y)
 {
@@ -51,7 +53,7 @@ char *fgetline(FILE *file)
 	}
 }
 
-int main()
+int main_pt()
 {
 	FILE *file = fopen("words.txt", "r");
 
@@ -98,7 +100,7 @@ int main()
 			getchar();
 			return 1;
 		}
-		
+
 		if (linesCount == linesAllocated)
 		{
 			lines = realloc(lines, (linesAllocated *= 2) * sizeof(char*));
@@ -132,7 +134,7 @@ int main()
 	free(lines);
 
 	printf("\nComplite");
-	
+
 	getchar();
 
 	prefixTree_free(tree, true);
@@ -140,4 +142,103 @@ int main()
 	getchar();
 
 	return 0;
+}
+
+int main_hm()
+{
+	FILE *file = fopen("words.txt", "r");
+
+	if (file == NULL)
+	{
+		printf("Unable to open file");
+		return 1;
+	}
+
+	fpos_t fileSize;
+	fpos_t filePos;
+	time_t lastUpdated = 0;
+	fseek(file, 0, SEEK_END);
+	fgetpos(file, &fileSize);
+	fseek(file, 0, SEEK_SET);
+
+	HashMap *map = hashMap_create();
+	char *line = NULL;
+	size_t linesAllocated = 128;
+	char **lines = calloc(128, sizeof(char*));
+	size_t linesCount = 0;
+
+	printf("Loading");
+
+	while (!feof(file))
+	{
+		//if (linesCount >= 5000000)
+		//	break;
+
+		line = fgetline(file);
+		if (line == NULL)
+			break;
+
+		if (!hashMap_insert(map, line, (ValueType)linesCount, false))
+		{
+			printf("\nout-of-memory (%u)", linesCount);
+			getchar();
+			return 1;
+		}
+
+		lines[linesCount++] = line;
+
+		ValueType value;
+		if (!hashMap_get(map, line, &value) || (size_t)value != linesCount - 1)
+		{
+			printf("\nERROR!");
+			getchar();
+			return 1;
+		}
+
+		if (linesCount == linesAllocated)
+		{
+			lines = realloc(lines, (linesAllocated *= 2) * sizeof(char*));
+		}
+	}
+
+	fclose(file);
+
+	printf("\nNumber of lines: %zu", linesCount);
+
+#if _WIN32 || _WIN64
+	struct timeb bstart, bend;
+	ftime(&bstart);
+#endif
+	for (size_t i = 0; i < linesCount; i++)
+	{
+		ValueType value;
+		if (!hashMap_get(map, lines[i], &value) || (size_t)value != i)
+		{
+			printf("\nERROR!");
+			getchar();
+			return 1;
+		}
+	}
+#if _WIN32 || _WIN64
+	ftime(&bend);
+	time_t time = (bend.time - bstart.time) * 1000 + bend.millitm - bstart.millitm;
+	printf("\nTime: %i (%f per line)", (int32_t)time, (float)time / (float)linesCount);
+#endif
+
+	free(lines);
+
+	printf("\nComplite");
+
+	getchar();
+
+	hashMap_free(map, true);
+
+	getchar();
+
+	return 0;
+}
+
+int main()
+{
+	return main_hm();
 }

@@ -58,13 +58,12 @@ static size_t allocateBlock(prefixTree* tree)
 	return tree->blocksCount++;
 }
 
-static int computeHash(char* key, size_t keyLen)
+static int32_t computeHash(char* key, size_t keyLen)
 {
 	int32_t hash;
-	hash = keyLen * 0x55 ^ 0xe5b5e5;
+	hash = keyLen * 0x55 ^ 0xe5b5c5;
 	for (size_t i = 0; i < keyLen; i++)
-		hash += (hash >> 28) + (hash << 4) + key[i];
-
+		hash += (hash >> 25) + (hash << 7) + key[i];
 	return hash;
 }
 
@@ -160,7 +159,7 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 						// Первый подход работает медленнее, но требует меньше памяти. 
 						// Второй — быстрее, но затраты памяти больше. 
 						// Разница по памяти и скорости 10-15%
-#if 0
+#if 1
 						tree->groupsOfBlocks[newBlockIndex / BLOCKS_IN_GROUP][(newBlockIndex % BLOCKS_IN_GROUP) * NODES_IN_BLOCK + IN_BLOCK_INDEX(node->key, i + 1)].key = node->key;
 						tree->groupsOfBlocks[newBlockIndex / BLOCKS_IN_GROUP][(newBlockIndex % BLOCKS_IN_GROUP) * NODES_IN_BLOCK + IN_BLOCK_INDEX(node->key, i + 1)].hashKey = node->hashKey;
 						tree->groupsOfBlocks[newBlockIndex / BLOCKS_IN_GROUP][(newBlockIndex % BLOCKS_IN_GROUP) * NODES_IN_BLOCK + IN_BLOCK_INDEX(node->key, i + 1)].value = node->value;

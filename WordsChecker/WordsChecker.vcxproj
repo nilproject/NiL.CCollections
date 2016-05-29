@@ -110,11 +110,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="HashMap.h" />
     <ClInclude Include="prefixTree.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="HashMap.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="prefixTree.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="makefile" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
