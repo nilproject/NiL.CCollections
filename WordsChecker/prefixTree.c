@@ -11,9 +11,8 @@
 #endif
 
 #define NODES_IN_BLOCK 16
-#define NODES_IN_GROUP (16 * 1024 * 1024 / sizeof(treeNode))
+#define NODES_IN_GROUP (4 * 1024 * 1024 / sizeof(treeNode))
 #define BLOCKS_IN_GROUP (NODES_IN_GROUP / NODES_IN_BLOCK)
-
 #define EMPTY_ITEM_MASK (1 << (sizeof(size_t) * 8 - 1))
 #define IN_BLOCK_INDEX(str, position) ((str[(position) / 2] >> (((position) & 1) * 4)) & 0xF)
 
@@ -34,7 +33,7 @@ typedef struct prefixTree
 	treeNode **groupsOfBlocks;
 } prefixTree;
 
-size_t allocateBlock(prefixTree* tree)
+static size_t allocateBlock(prefixTree* tree)
 {
 	if (tree->blocksRezerved == tree->blocksCount)
 	{
@@ -47,7 +46,6 @@ size_t allocateBlock(prefixTree* tree)
 
 		tree->groupsOfBlocks = newNodes;
 
-		auto nodesInGroup = NODES_IN_GROUP;
 		void* newGroup = calloc(NODES_IN_GROUP, sizeof(treeNode));
 		if (newGroup == NULL)
 			return 0;
@@ -60,7 +58,7 @@ size_t allocateBlock(prefixTree* tree)
 	return tree->blocksCount++;
 }
 
-int computeHash(char* key, size_t keyLen)
+static int computeHash(char* key, size_t keyLen)
 {
 	int32_t hash;
 	hash = keyLen * 0x55 ^ 0xe5b5e5;
@@ -91,16 +89,15 @@ void prefixTree_free(PrefixTree *ptTree, _Bool fFreeKeys)
 		return;
 
 	prefixTree *tree = ptTree;
-
-	if (fFreeKeys)
+	
+	for (size_t i = 0; i < tree->blocksRezerved / BLOCKS_IN_GROUP; i++)
 	{
-		for (size_t i = 0; i < tree->blocksRezerved / BLOCKS_IN_GROUP; i++)
+		if (fFreeKeys)
 		{
 			for (size_t j = 0; j < NODES_IN_GROUP; j++)
 				free(tree->groupsOfBlocks[i][j].key);
-
-			free(tree->groupsOfBlocks[i]);
 		}
+		free(tree->groupsOfBlocks[i]);
 	}
 
 	free(tree->groupsOfBlocks);
@@ -120,7 +117,6 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 	prefixTree *tree = ptTree;
 	char *sKey_i = sKey;
 	ValueType value_i = value;
-	int32_t hash = computeHash(sKey, keyLen);
 
 	if (keyLen == 0)
 	{
@@ -128,6 +124,8 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 		tree->itemsCount |= EMPTY_ITEM_MASK;
 		return true;
 	}
+
+	int32_t hash = computeHash(sKey, keyLen);
 
 	_Bool tailRecursion = true;
 	while (tailRecursion)
@@ -164,6 +162,7 @@ _Bool prefixTree_set(const PrefixTree *ptTree, const char* sKey, const ValueType
 						// Разница по памяти и скорости 10-15%
 #if 0
 						tree->groupsOfBlocks[newBlockIndex / BLOCKS_IN_GROUP][(newBlockIndex % BLOCKS_IN_GROUP) * NODES_IN_BLOCK + IN_BLOCK_INDEX(node->key, i + 1)].key = node->key;
+						tree->groupsOfBlocks[newBlockIndex / BLOCKS_IN_GROUP][(newBlockIndex % BLOCKS_IN_GROUP) * NODES_IN_BLOCK + IN_BLOCK_INDEX(node->key, i + 1)].hashKey = node->hashKey;
 						tree->groupsOfBlocks[newBlockIndex / BLOCKS_IN_GROUP][(newBlockIndex % BLOCKS_IN_GROUP) * NODES_IN_BLOCK + IN_BLOCK_INDEX(node->key, i + 1)].value = node->value;
 
 						tree->itemsCount++;
