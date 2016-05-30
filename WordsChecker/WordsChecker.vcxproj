@@ -112,10 +112,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="HashMap.h" />
+    <ClInclude Include="HashSet.h" />
     <ClInclude Include="prefixTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HashMap.c" />
+    <ClCompile Include="HashSet.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="prefixTree.c" />
   </ItemGroup>

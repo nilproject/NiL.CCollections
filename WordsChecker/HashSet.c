@@ -3,7 +3,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "HashMap.h"
+#include "HashSet.h"
 
 #ifndef max
 #define max(x,y) ((x)>(y)?x:y)
@@ -17,21 +17,19 @@ typedef struct node
 	int32_t hash;
 	int32_t next;
 	char *key;
-	ValueType value;
 } node;
 
-typedef struct hashMap
+typedef struct hashSet
 {
 	_Bool emptyKeyValueExists;
-	ValueType emptyKeyValue;
 	size_t itemsCount;
 	size_t nodesAllocated;
 	node **groupsOfNodes;
-} hashMap;
+} hashSet;
 
-static _Bool increaseSize(hashMap *const map)
+static _Bool increaseSize(hashSet *const set)
 {
-	size_t newNodesAllocated = map->nodesAllocated << 1;
+	size_t newNodesAllocated = set->nodesAllocated << 1;
 	size_t newGroupsCount = newNodesAllocated / NODES_IN_GROUP;
 
 	node **newNodes = malloc(newGroupsCount * sizeof(node*));
@@ -53,10 +51,10 @@ static _Bool increaseSize(hashMap *const map)
 		newNodes[i] = newGroup;
 	}
 
-	node **oldNodes = map->groupsOfNodes;
-	map->groupsOfNodes = newNodes;
-	map->nodesAllocated = newNodesAllocated;
-	map->itemsCount = 0;
+	node **oldNodes = set->groupsOfNodes;
+	set->groupsOfNodes = newNodes;
+	set->nodesAllocated = newNodesAllocated;
+	set->itemsCount = 0;
 
 	for (size_t i = 0; i < newGroupsCount >> 1; i++)
 	{
@@ -64,7 +62,7 @@ static _Bool increaseSize(hashMap *const map)
 		{
 			if (oldNodes[i][j].key != NULL)
 			{
-				hashMap_insert((HashMap*)map, oldNodes[i][j].key, oldNodes[i][j].value, false);
+				hashSet_insert((HashSet*)set, oldNodes[i][j].key, false);
 			}
 		}
 
@@ -85,9 +83,9 @@ static inline int32_t computeHash(const char *const key, const size_t keyLen)
 	return hash;
 }
 
-HashMap *hashMap_create()
+HashSet *hashSet_create()
 {
-	hashMap *tree = calloc(1, sizeof(hashMap));
+	hashSet *tree = calloc(1, sizeof(hashSet));
 	if (!tree)
 		return NULL;
 
@@ -96,34 +94,34 @@ HashMap *hashMap_create()
 	tree->groupsOfNodes = (node**)malloc(1 * sizeof(node*));
 	tree->groupsOfNodes[0] = (node*)calloc(NODES_IN_GROUP, sizeof(node));
 
-	return (HashMap*)tree;
+	return (HashSet*)tree;
 }
 
-void hashMap_free(HashMap *const pHashMap, _Bool fFreeKeys)
+void hashSet_free(HashSet *const pHashSet, _Bool fFreeKeys)
 {
-	if (!pHashMap)
+	if (!pHashSet)
 		return;
 
-	hashMap *map = (hashMap*)pHashMap;
+	hashSet *set = (hashSet*)pHashSet;
 
-	for (size_t i = 0; i < map->nodesAllocated / NODES_IN_GROUP; i++)
+	for (size_t i = 0; i < set->nodesAllocated / NODES_IN_GROUP; i++)
 	{
 		if (fFreeKeys)
 		{
 			for (size_t j = 0; j < NODES_IN_GROUP; j++)
-				free(map->groupsOfNodes[i][j].key);
+				free(set->groupsOfNodes[i][j].key);
 		}
 
-		free(map->groupsOfNodes[i]);
+		free(set->groupsOfNodes[i]);
 	}
 
-	free(map->groupsOfNodes);
-	free(map);
+	free(set->groupsOfNodes);
+	free(set);
 }
 
-_Bool hashMap_insert(HashMap *const pHashMap, char *const sKey, const ValueType value, const _Bool fCopyKey)
+_Bool hashSet_insert(HashSet *const pHashSet, char *const sKey, const _Bool fCopyKey)
 {
-	if (!pHashMap)
+	if (!pHashSet)
 		return false;
 
 	if (!sKey)
@@ -131,105 +129,101 @@ _Bool hashMap_insert(HashMap *const pHashMap, char *const sKey, const ValueType 
 
 	size_t keyLen = strlen(sKey);
 
-	hashMap *map = (hashMap*)pHashMap;
+	hashSet *set = (hashSet*)pHashSet;
 
 	if (keyLen == 0)
 	{
-		map->emptyKeyValue = value;
-		map->emptyKeyValueExists = true;
+		set->emptyKeyValueExists = true;
 		return true;
 	}
 
 	int32_t hash = computeHash(sKey, keyLen);
 
-	int32_t mask = map->nodesAllocated - 1;
+	int32_t mask = set->nodesAllocated - 1;
 	int32_t index = hash & mask;
 	int32_t colisionCount = 0;
 
 	do
 	{
-		if (map->record(index).hash == hash && strcmp(map->record(index).key, sKey) == 0)
+		if (set->record(index).hash == hash && strcmp(set->record(index).key, sKey) == 0)
 		{
-			map->record(index).value = value;
 			return true;
 		}
 
-		index = map->record(index).next - 1;
+		index = set->record(index).next - 1;
 	} 
 	while (index >= 0);
 
-	if ((map->itemsCount > 50 && map->itemsCount * 7 / 4 >= mask) || map->itemsCount == mask + 1)
+	if ((set->itemsCount > 50 && set->itemsCount * 7 / 4 >= mask) || set->itemsCount == mask + 1)
 	{
-		if (!increaseSize(map))
+		if (!increaseSize(set))
 			return false;
 
-		mask = map->nodesAllocated - 1;
+		mask = set->nodesAllocated - 1;
 	}
 
 	int prewIndex = -1;
 	index = hash & mask;
 
-	if (map->record(index).key != NULL)
+	if (set->record(index).key != NULL)
 	{
-		while (map->record(index).next > 0)
+		while (set->record(index).next > 0)
 		{
-			index = map->record(index).next - 1;
+			index = set->record(index).next - 1;
 			colisionCount++;
 		}
 
 		prewIndex = index;
-		while (map->record(index).key != NULL)
+		while (set->record(index).key != NULL)
 			index = (index + 3) & mask;
 	}
 
-	map->record(index).value = value;
-	map->record(index).hash = hash;
+	set->record(index).hash = hash;
 	if (fCopyKey)
 	{
-		map->record(index).key = calloc(keyLen + 1, sizeof(char));
-		strcpy(map->record(index).key, sKey);
+		set->record(index).key = calloc(keyLen + 1, sizeof(char));
+		strcpy(set->record(index).key, sKey);
 	}
 	else
 	{
-		map->record(index).key = sKey;
+		set->record(index).key = sKey;
 	}
 
 	if (prewIndex >= 0)
-		map->record(prewIndex).next = index + 1;
+		set->record(prewIndex).next = index + 1;
 
-	map->itemsCount++;
+	set->itemsCount++;
 
 	if (colisionCount > 29)
-		increaseSize(map);
+		increaseSize(set);
 
 	return true;
 }
 
-_Bool hashMap_get(const HashMap *pHashMap, const char *const sKey, ValueType *value)
+_Bool hashSet_contains(const HashSet *pHashSet, const char *const sKey)
 {
-	if (!pHashMap)
+	if (!pHashSet)
 		return false;
 
-	if (!sKey || !value)
+	if (!sKey)
 		return false;
 
-	hashMap *map = (hashMap*)pHashMap;
+	hashSet *set = (hashSet*)pHashSet;
 
 	size_t keyLen = strlen(sKey);
 
 	if (keyLen == 0)
 	{
-		if (map->emptyKeyValueExists)
+		if (set->emptyKeyValueExists)
 		{
-			*value = map->emptyKeyValue;
 			return true;
 		}
 
 		return false;
 	}
 
-	int32_t elen = map->nodesAllocated - 1;
-	if (map->nodesAllocated == 0)
+	int32_t elen = set->nodesAllocated - 1;
+	if (set->nodesAllocated == 0)
 		return false;
 
 	int32_t hash = computeHash(sKey, keyLen);
@@ -237,10 +231,9 @@ _Bool hashMap_get(const HashMap *pHashMap, const char *const sKey, ValueType *va
 
 	do
 	{
-		node *node = &map->record(index);
+		node *node = &set->record(index);
 		if (node->hash == hash && strcmp(node->key, sKey) == 0)
 		{
-			*value = node->value;
 			return true;
 		}
 
@@ -251,12 +244,12 @@ _Bool hashMap_get(const HashMap *pHashMap, const char *const sKey, ValueType *va
 	return false;
 }
 
-size_t hashMap_count(const HashMap *ptTree)
+size_t hashSet_count(const HashSet *ptTree)
 {
 	if (!ptTree)
 		return false;
 
-	hashMap *tree = (hashMap*)ptTree;
+	hashSet *tree = (hashSet*)ptTree;
 
 	return tree->itemsCount + (tree->emptyKeyValueExists ? 1 : 0);
 }
