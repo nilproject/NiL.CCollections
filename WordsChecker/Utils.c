@@ -28,30 +28,28 @@ intptr_t binarySearchMore(const intptr_t *const pArray, const size_t arrayLength
 	if (pArray[end - 1] <= x)
 		return -1;
 
-	while (start != end)
+	for (;;)
 	{
 		intptr_t item = pArray[index];
+
+		if (end - start == 1)
+		{
+			if (item <= x)
+				index++;
+			break;
+		}
 
 		if (item > x)
 		{
 			end = index;
 		}
-		else if (item < x)
+		else if (item <= x)
 		{
 			start = index;
-		}
-		else
-		{
-			while (index < arrayLength && pArray[index] == x)
-				index++;
-
-			if (index == arrayLength)
-				return -1;
-			return index;
 		}
 
 		index = start + ((end - start) >> 1);
 	}
 
-	return -1;
+	return index;
 }

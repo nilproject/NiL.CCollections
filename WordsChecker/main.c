@@ -328,11 +328,13 @@ int main_hs()
 int main_bs()
 {
 	size_t len = 10000;
-	size_t *array = calloc(len, sizeof(size_t));
+	intptr_t *array = calloc(len, sizeof(intptr_t));
 	intptr_t index;
 
 	for (size_t i = 0; i < len; i++)
-		array[i] = i;
+	{
+		array[i] = ((i + (i / (len / 5)) * 3) / 4) * 4;
+	}
 
 #if _WIN32 || _WIN64
 	struct timeb bstart, bend;
@@ -340,8 +342,22 @@ int main_bs()
 #endif
 
 	for (int loop = 1; loop < len; loop++)
-		for (int i = 0; i < loop + 2; i++)
+		for (int i = 0; i < loop + 16; i++)
+		{
 			index = binarySearchMore(array, loop, i - 1);
+
+			if (index >= 0 && array[index] <= i - 1)
+			{
+				printf("Error #1: %i/%i\n", i, loop);
+				break;
+			}
+
+			if (index > 0 && array[index - 1] > i - 1)
+			{
+				printf("Error #2: %i/%i\n", i, loop);
+				break;
+			}
+		}
 
 #if _WIN32 || _WIN64
 	ftime(&bend);
