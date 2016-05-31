@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 #if _WIN32 || _WIN64
 #include <intrin.h>
@@ -7,12 +9,10 @@
 #include <Windows.h>
 #endif
 
-#include <string.h>
-#include <time.h>
-
 #include "prefixTree.h"
 #include "HashMap.h"
 #include "HashSet.h"
+#include "Utils.h"
 
 bool gotoxy(short x, short y)
 {
@@ -20,7 +20,7 @@ bool gotoxy(short x, short y)
 	COORD coord = { .X = x,.Y = y };
 	return SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 #else
-	printf("%c[%d;%df",0x1B,y,x);
+	printf("%c[%d;%df", 0x1B, y, x);
 	return true;
 #endif
 }
@@ -325,7 +325,35 @@ int main_hs()
 	return 0;
 }
 
+int main_bs()
+{
+	size_t len = 10000;
+	size_t *array = calloc(len, sizeof(size_t));
+	intptr_t index;
+
+	for (size_t i = 0; i < len; i++)
+		array[i] = i;
+
+#if _WIN32 || _WIN64
+	struct timeb bstart, bend;
+	ftime(&bstart);
+#endif
+
+	for (int loop = 1; loop < len; loop++)
+		for (int i = 0; i < loop + 2; i++)
+			index = binarySearchMore(array, loop, i - 1);
+
+#if _WIN32 || _WIN64
+	ftime(&bend);
+	time_t time = (bend.time - bstart.time) * 1000 + bend.millitm - bstart.millitm;
+	printf("Time: %i\n", (int32_t)time);
+#endif
+
+	printf("%zi", index);
+	getchar();
+}
+
 int main()
 {
-	return main_hs();
+	return main_bs();
 }

@@ -114,12 +114,14 @@
     <ClInclude Include="HashMap.h" />
     <ClInclude Include="HashSet.h" />
     <ClInclude Include="prefixTree.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HashMap.c" />
     <ClCompile Include="HashSet.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="prefixTree.c" />
+    <ClCompile Include="Utils.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="makefile" />
