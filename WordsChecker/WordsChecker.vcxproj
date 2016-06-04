@@ -115,6 +115,7 @@
     <ClInclude Include="HashSet.h" />
     <ClInclude Include="prefixTree.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="WordSet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HashMap.c" />
@@ -122,6 +123,7 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="prefixTree.c" />
     <ClCompile Include="Utils.c" />
+    <ClCompile Include="WordSet.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="makefile" />
