@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stddef.h>
 
 #include "HashSet.h"
 
@@ -83,7 +84,7 @@ static inline int32_t computeHash(const char *const key, const size_t keyLen)
 	return hash;
 }
 
-HashSet *hashSet_create()
+extern HashSet *hashSet_create()
 {
 	hashSet *tree = calloc(1, sizeof(hashSet));
 	if (!tree)
@@ -97,7 +98,7 @@ HashSet *hashSet_create()
 	return (HashSet*)tree;
 }
 
-void hashSet_free(HashSet *const pHashSet, _Bool fFreeKeys)
+extern void hashSet_free(HashSet *const pHashSet, _Bool fFreeKeys)
 {
 	if (!pHashSet)
 		return;
@@ -119,7 +120,7 @@ void hashSet_free(HashSet *const pHashSet, _Bool fFreeKeys)
 	free(set);
 }
 
-_Bool hashSet_insert(HashSet *const pHashSet, char *const sKey, const _Bool fCopyKey)
+extern _Bool hashSet_insert(HashSet *const pHashSet, char *const sKey, const _Bool fCopyKey)
 {
 	if (!pHashSet)
 		return false;
@@ -200,7 +201,7 @@ _Bool hashSet_insert(HashSet *const pHashSet, char *const sKey, const _Bool fCop
 	return true;
 }
 
-_Bool hashSet_contains(const HashSet *pHashSet, const char *const sKey)
+extern _Bool hashSet_contains(const HashSet *pHashSet, const char *const sKey)
 {
 	if (!pHashSet)
 		return false;
@@ -244,7 +245,7 @@ _Bool hashSet_contains(const HashSet *pHashSet, const char *const sKey)
 	return false;
 }
 
-size_t hashSet_count(const HashSet *ptTree)
+extern size_t hashSet_count(const HashSet *ptTree)
 {
 	if (!ptTree)
 		return false;

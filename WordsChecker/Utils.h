@@ -1,3 +1,3 @@
 #pragma once
 
-intptr_t binarySearchMore(const intptr_t * const pArray, const size_t arrayLength, const intptr_t x);
+extern ptrdiff_t binarySearchMore(const ptrdiff_t * const pArray, const size_t arrayLength, const ptrdiff_t x);

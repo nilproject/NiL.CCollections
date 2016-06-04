@@ -1,8 +1,9 @@
 #include <stdlib.h>
+#include <stddef.h>
 
 #include "Utils.h"
 
-intptr_t binarySearchMore(const intptr_t *const pArray, const size_t arrayLength, const intptr_t x)
+extern ptrdiff_t binarySearchMore(const ptrdiff_t *const pArray, const size_t arrayLength, const ptrdiff_t x)
 {
 	if (!pArray || arrayLength <= 0)
 		return -1;
@@ -30,7 +31,7 @@ intptr_t binarySearchMore(const intptr_t *const pArray, const size_t arrayLength
 
 	for (;;)
 	{
-		intptr_t item = pArray[index];
+		ptrdiff_t item = pArray[index];
 
 		if (end - start == 1)
 		{

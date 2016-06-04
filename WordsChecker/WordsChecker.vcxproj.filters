@@ -30,6 +30,12 @@
     <ClInclude Include="WordSet.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
+    <ClInclude Include="unistd.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="getopt.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="prefixTree.c">
@@ -50,8 +56,14 @@
     <ClCompile Include="WordSet.c">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="getopt.c">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="makefile" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="judy\Judy.lib" />
   </ItemGroup>
 </Project>
