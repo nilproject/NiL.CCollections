@@ -17,7 +17,8 @@ namespace TestFileGenerator
             //using (var writer = new StreamWriter(file))
             {
                 var words = new WordSet();
-                /*                
+                //var words = new HashSet<string>();
+                /*
                 words.Add("foxes");
                 words.Add("fox");
                 words.Add("boxes");
@@ -35,13 +36,13 @@ namespace TestFileGenerator
                 var stringBuilder = new StringBuilder();
                 var size = 0;
                 var count = 0;
-                var limit = 128 * 1024 * 1024;
+                var limit = 2 * 1024 * 1024;
                 var random = new Random(777);
                 var updated = Environment.TickCount;
                 var sw = Stopwatch.StartNew();
                 var acceptorSize = 0;
                 var acceptors = new List<Acceptor>();
-                //var strings = new List<string>();
+                var strings = new List<string>();
 
                 while (size <= limit)
                 {
@@ -61,20 +62,20 @@ namespace TestFileGenerator
                         //writer.Write('\n');
                         size += len + 1;
                         acceptorSize += len + 1;
-                        //strings.Add(word);
+                        strings.Add(word);
                         count++;
                     }
 
-                    if (words.Count % 5000 == 0)
+                    if (words.Count % 10000 == 0)
                         words.Compress();
 
-                    if (acceptorSize >= 1 * 256 * 1024)
-                    {
-                        acceptorSize = 0;
-                        words.Compress();
-                        acceptors.Add(words.GetAcceptor());
-                        words.Clear();
-                    }
+                    //if (acceptorSize >= 24 * 128 * 1024)
+                    //{
+                    //    acceptorSize = 0;
+                    //    words.Compress();
+                    //    acceptors.Add(words.GetAcceptor());
+                    //    words.Clear();
+                    //}
 
                     if (Environment.TickCount - updated > 500)
                     {
@@ -87,7 +88,6 @@ namespace TestFileGenerator
                 words.Compress();
                 words.Freeze();
                 acceptorSize = 0;
-                words.Compress();
                 acceptors.Add(words.GetAcceptor());
                 words.Clear();
 
@@ -99,25 +99,37 @@ namespace TestFileGenerator
 
                 Console.WriteLine();
                 Console.WriteLine(sw.Elapsed);
-                //Console.WriteLine((sw.Elapsed.TotalMilliseconds / (float)strings.Count).ToString("F10"));
-                Console.WriteLine("Nodes: " + words.nodes);
-                Console.WriteLine("Merges: " + words.merges);
-                Console.WriteLine("Splits: " + words.splits);
+                Console.WriteLine((sw.Elapsed.TotalMilliseconds / (float)count).ToString("F10"));
+                //Console.WriteLine("Nodes: " + words.nodes);
+                //Console.WriteLine("Merges: " + words.merges);
+                //Console.WriteLine("Splits: " + words.splits);
                 Console.WriteLine("Lines: " + count);
 
-
-                /*var sw = Stopwatch.StartNew();
-                foreach (var word in words)
+                sw.Restart();
+                for (var wi = 0; wi < strings.Count; wi++)
                 {
-                    if (!words.Contains(word))
+                    var word = strings[wi];
+                    bool found = false;
+
+                    for (var i = 0; i < acceptors.Count; i++)
+                    {
+                        if (acceptors[i].Contains(word))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    //found = words.Contains(strings[wi]);
+
+                    if (!found)
                         throw new KeyNotFoundException(word);
                 }
-
+                sw.Stop();
                 Console.WriteLine(sw.Elapsed);
-                Console.WriteLine((sw.Elapsed.TotalMilliseconds / (float)words.Count).ToString("F10"));
-                */
+                Console.WriteLine((sw.Elapsed.TotalMilliseconds / (float)count).ToString("F10"));
 
-                //strings.Clear();
+                strings.Clear();
 
                 GC.Collect();
                 GC.WaitForPendingFinalizers();

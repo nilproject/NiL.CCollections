@@ -135,13 +135,15 @@ namespace TestFileGenerator
                 node.AcceptorPosition = 0;
             };
 
+            reset(_root);
+
             addToAcceptor = state =>
             {
                 int blockPosition = allocatedItems;
                 var isFinal = false;
                 //stateBlockPosition.Add(state, blockPosition);
                 state.AcceptorPosition = blockPosition;
-                allocatedItems += state.Childs.Count + ((state.Childs.Count & 1) ^ 1);
+                allocatedItems += state.Childs.Count + 1;
 
                 if (items.Length <= allocatedItems >> 1)
                 {
@@ -155,7 +157,7 @@ namespace TestFileGenerator
                 for (; i < state.Childs.Count; i++)
                 {
                     index = blockPosition + i - (isFinal ? 1 : 0);
-                    if (state.Childs[i].Char == 0)
+                    if (state.Childs[i] == _final)
                     {
                         isFinal = true;
                         continue;
@@ -185,9 +187,9 @@ namespace TestFileGenerator
 
             addToAcceptor(_root);
 
-            if (maxIndex != items.Length)
+            if (maxIndex + 2 != items.Length)
             {
-                var newItems = new Acceptor.Item[maxIndex + 1];
+                var newItems = new Acceptor.Item[maxIndex + 2];
                 Array.Copy(items, newItems, newItems.Length);
                 items = newItems;
             }
@@ -336,8 +338,14 @@ namespace TestFileGenerator
             {
                 if (nodes[i] == null || nodes[i].deleted != 0)
                 {
+                    mergesCount++;
                     nodes[i] = null;
                     continue;
+                }
+
+                if (node == _final)
+                {
+                    while (merge(nodes[i])) ;
                 }
 
                 for (var j = i; j-- > 0;)
