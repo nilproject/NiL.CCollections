@@ -9,47 +9,55 @@ namespace TestFileGenerator
 {
     public sealed class WordSet : ISet<string>
     {
-        private sealed class State
+        private sealed class _Node
         {
-            private sealed class _Comparer : Comparer<State>
+            private sealed class _Comparer : Comparer<_Node>
             {
-                public override int Compare(State x, State y)
+                public override int Compare(_Node x, _Node y)
                 {
                     if (x == y)
                         return 0;
+
                     if (x == null)
                         return 1;
+
                     if (y == null)
                         return -1;
-                    if (y.Char == x.Char)
-                        return x.Childs.Count - y.Childs.Count;
+
+                    if (x.Char == y.Char)
+                    {
+                        if (x.Childs.Count != y.Childs.Count)
+                            return x.Childs.Count - y.Childs.Count;
+
+                        return x.Parents.Count - y.Parents.Count;
+                    }
+
                     return x.Char - y.Char;
                 }
             }
 
-            public static readonly Comparer<State> Comparer = new _Comparer();
+            public static readonly Comparer<_Node> Comparer = new _Comparer();
 
             public readonly char Char;
-            public byte ParentsSorted;
-            internal byte deleted;
-            public List<State> Parents;
-            public readonly List<State> Childs;
-            public int AcceptorPosition;
+            public bool ParentsSorted;
+            public bool Deleted;
+            public List<_Node> Parents;
+            public readonly List<_Node> Childs;
 
-            public State()
+            public _Node()
             {
-                Parents = new List<State>();
-                Childs = new List<State>();
-                ParentsSorted = 1;
+                Parents = new List<_Node>();
+                Childs = new List<_Node>();
+                ParentsSorted = true;
             }
 
-            public State(char c)
+            public _Node(char c)
                 : this()
             {
                 Char = c;
             }
 
-            public State(char c, State parent)
+            public _Node(char c, _Node parent)
                 : this(c)
             {
                 Parents.Add(parent);
@@ -68,11 +76,17 @@ namespace TestFileGenerator
             }
         }
 
-        private State _root;
-        private State _final;
+        public int nodes = 0;
+        public int merges = 0;
+        public int splits = 0;
+
+        private _Node _root;
+        private _Node _final;
         private int _count;
         private int _statesCount;
         private bool frozen;
+
+        public int FinalStateParentsCount => _final.Parents.Count;
 
         public int Count
         {
@@ -92,8 +106,8 @@ namespace TestFileGenerator
 
         public WordSet()
         {
-            _root = new State();
-            _final = new State();
+            _root = new _Node();
+            _final = new _Node();
         }
 
         public void Freeze()
@@ -101,7 +115,7 @@ namespace TestFileGenerator
             if (frozen)
                 return;
 
-            Action<State> freeze = null;
+            Action<_Node> freeze = null;
 
             freeze = node =>
             {
@@ -116,34 +130,23 @@ namespace TestFileGenerator
         public void Compress()
         {
             var c = 0;
-            while (merge(_final)) c++;
+            while (mergeParents(_final)) c++;
         }
 
         public Acceptor GetAcceptor()
         {
-            var allocatedItems = 0;
             var items = new Acceptor.Item[(_statesCount >> 1) + _count];
-            Func<State, int> addToAcceptor = null;
-            //Dictionary<State, int> stateBlockPosition = new Dictionary<State, int>(items.Length);
+            var allocatedItems = 0;
             var maxIndex = 0;
-            Action<State> reset = null;
+            var acceptorPositions = new Dictionary<_Node, int>();
 
-            reset = node =>
-            {
-                for (var i = 0; i < node.Childs.Count; i++)
-                    reset(node.Childs[i]);
-                node.AcceptorPosition = 0;
-            };
-
-            reset(_root);
-
-            addToAcceptor = state =>
+            Func<_Node, int> addToAcceptor = null;
+            addToAcceptor = node =>
             {
                 int blockPosition = allocatedItems;
                 var isFinal = false;
-                //stateBlockPosition.Add(state, blockPosition);
-                state.AcceptorPosition = blockPosition;
-                allocatedItems += state.Childs.Count + 1;
+                acceptorPositions[node] = blockPosition;
+                allocatedItems += node.Childs.Count + 1;
 
                 if (items.Length <= allocatedItems >> 1)
                 {
@@ -154,21 +157,21 @@ namespace TestFileGenerator
 
                 var index = 0;
                 var i = 0;
-                for (; i < state.Childs.Count; i++)
+                for (; i < node.Childs.Count; i++)
                 {
                     index = blockPosition + i - (isFinal ? 1 : 0);
-                    if (state.Childs[i] == _final)
+                    if (node.Childs[i] == _final)
                     {
                         isFinal = true;
                         continue;
                     }
 
-                    items[index >> 1].Chars[index & 1] = state.Childs[i].Char;
+                    items[index >> 1].Chars[index & 1] = node.Childs[i].Char;
 
-                    int childBlockPosition = state.Childs[i].AcceptorPosition;
-                    //if (!stateBlockPosition.TryGetValue(state.Childs[i], out childBlockPosition))
+                    int childBlockPosition = 0;
+                    acceptorPositions.TryGetValue(node.Childs[i], out childBlockPosition);
                     if (childBlockPosition == 0)
-                        childBlockPosition = addToAcceptor(state.Childs[i]);
+                        childBlockPosition = addToAcceptor(node.Childs[i]);
 
                     items[index >> 1].ChildsIndex[index & 1] = childBlockPosition;
                 }
@@ -205,92 +208,119 @@ namespace TestFileGenerator
             if (frozen)
                 throw new InvalidOperationException();
 
-            bool needSplit = false;
+            splitIfNeed(item);
+
             var node = _root;
             for (var i = 0; i < item.Length; i++)
             {
-                bool found = false;
+                var child = findChild(node, item[i]);
 
-                for (var j = 0; j < node.Childs.Count; j++)
+                if (child == null)
                 {
-                    if (node.Childs[j].Char == item[i])
+                    if (i == item.Length - 1 && _final.ParentsSorted)
                     {
-                        found = true;
-                        node = node.Childs[j];
-                        needSplit |= node.Parents.Count > 1;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    if (needSplit)
-                    {
-                        split(item);
-                        return Add(item); // Рекурсия не будет более одного кадра глубиной
-                    }
-
-                    if (i == item.Length - 1)
-                    {
-                        var list = _final.Parents;
-                        var len = list.Count;
-                        for (var j = 0; j < len; j++)
+                        var parents = _final.Parents;
+                        var len = parents.Count;
+                        var j = findParentIndexForKey(parents, item[i]);
+                        if (j >= 0)
                         {
-                            if (list[j].Char == item[i])
+                            for (; j < len; j++)
                             {
-                                if (list[j].Parents.IndexOf(node) == -1)
+                                if (parents[j].Char != item[i])
+                                    break;
+
+                                if (parents[j].Childs.Count == 1 && parents[j].Childs[0] == _final)
                                 {
-                                    list[j].Parents.Add(node);
-                                    node.Childs.Add(list[j]);
+                                    if (parents[j].Parents.IndexOf(node) == -1)
+                                    {
+                                        parents[j].Parents.Add(node);
+                                        parents[j].ParentsSorted = false;
+                                        node.Childs.Add(parents[j]);
+                                    }
+
+                                    _count++;
+                                    return true;
                                 }
-                                _count++;
-                                return true;
+                                else
+                                {
+                                    //break;
+                                }
                             }
                         }
                     }
 
-                    node = new State(item[i], node);
+                    node = new _Node(item[i], node);
 
                     _statesCount++;
                     nodes++;
+                }
+                else
+                {
+                    node = child;
                 }
             }
 
             if (node.Childs.Contains(_final))
                 return false;
 
-            if (needSplit)
-            {
-                split(item);
-                return Add(item); // Рекурсия не будет более одного кадра глубиной
-            }
-
             _count++;
             node.Childs.Add(_final);
             _final.Parents.Add(node);
-            _final.ParentsSorted = 0;
+            _final.ParentsSorted = false;
 
             return true;
         }
 
-        public int nodes = 0;
-        public int merges = 0;
-        public int splits = 0;
-
-        private void split(string item)
+        private int findParentIndexForKey(List<_Node> parents, char c)
         {
-            var node = _root;
-            for (var i = 0; i < item.Length; i++)
+            if (parents.Count == 0 || parents[0].Char < c || parents[parents.Count - 1].Char > c)
+                return -1;
+
+            if (parents[0].Char == c)
+                return 0;
+
+            int result;
+            if (parents[parents.Count - 1].Char == c)
             {
-                State child = null;
-                for (var j = 0; j < node.Childs.Count; j++)
+                result = parents.Count - 1;
+            }
+            else
+            {
+                var start = 0;
+                var end = parents.Count - 1;
+                result = start + (end - start) >> 1;
+
+                while (end - start > 1)
                 {
-                    if (node.Childs[j].Char == item[i])
+                    if (parents[result].Char < c)
                     {
-                        child = node.Childs[j];
+                        end = result;
+                    }
+                    else if (parents[result].Char > c)
+                    {
+                        start = result;
+                    }
+                    else
+                    {
                         break;
                     }
+
+                    result = start + ((end - start) >> 1);
                 }
+            }
+
+            while (result > 0 && parents[result - 1].Char == c)
+                result--;
+
+            return result;
+        }
+
+        private void splitIfNeed(string key)
+        {
+            var node = _root;
+            for (var i = 0; i < key.Length; i++)
+            {
+                _Node child = findChild(node, key[i]);
 
                 if (child == null)
                     return;
@@ -300,10 +330,10 @@ namespace TestFileGenerator
                     splits++;
                     _statesCount++;
 
-                    child.Parents.RemoveAt(child.Parents.FindIndex(x => x == node));
-                    node.Childs.RemoveAt(node.Childs.FindIndex(x => x == child));
+                    child.Parents.RemoveAt(child.Parents.IndexOf(node));
+                    node.Childs.RemoveAt(node.Childs.IndexOf(child));
 
-                    var newState = new State(child.Char);
+                    var newState = new _Node(child.Char);
                     node.Childs.Add(newState);
                     newState.Parents.Add(node);
 
@@ -311,7 +341,7 @@ namespace TestFileGenerator
                     for (var ci = 0; ci < newState.Childs.Count; ci++)
                     {
                         newState.Childs[ci].Parents.Add(newState);
-                        newState.Childs[ci].ParentsSorted = 0;
+                        newState.Childs[ci].ParentsSorted = false;
                     }
 
                     child = newState;
@@ -321,22 +351,40 @@ namespace TestFileGenerator
             }
         }
 
-        private bool merge(State node)
+        private static _Node findChild(_Node node, char c)
+        {
+            for (var j = 0; j < node.Childs.Count; j++)
+            {
+                if (node.Childs[j].Char == c)
+                {
+                    return node.Childs[j];
+                }
+            }
+
+            return null;
+        }
+
+        private bool mergeParents(_Node node)
         {
             bool result = false;
             int mergesCount = 0;
             var nodes = node.Parents;
 
-            if (node.ParentsSorted == 0)
+            if (!node.ParentsSorted)
             {
-                nodes.Sort(State.Comparer);
-                node.ParentsSorted = 1;
+                nodes.Sort(_Node.Comparer);
+                nodes.Reverse();
+                node.ParentsSorted = true;
+            }
+            else
+            {
+                return false;
             }
 
             var count = nodes.Count;
             for (var i = 1; i < count; i++)
             {
-                if (nodes[i] == null || nodes[i].deleted != 0)
+                if (nodes[i] == null || nodes[i].Deleted)
                 {
                     mergesCount++;
                     nodes[i] = null;
@@ -345,7 +393,7 @@ namespace TestFileGenerator
 
                 if (node == _final)
                 {
-                    while (merge(nodes[i])) ;
+                    while (mergeParents(nodes[i])) ;
                 }
 
                 for (var j = i; j-- > 0;)
@@ -353,22 +401,26 @@ namespace TestFileGenerator
                     if (nodes[j] == null)
                         continue;
 
-                    if (nodes[j].Char != nodes[i].Char)
-                        break;
-
-                    if (nodes[j].Childs.Count != nodes[i].Childs.Count)
-                        break;
-
                     bool isEquals = true;
-                    var len = nodes[j].Childs.Count;
-                    var ichilds = nodes[i].Childs;
-                    var jchilds = nodes[j].Childs;
-                    for (var ci = 0; ci < len; ci++)
+
+                    if (nodes[i] != nodes[j])
                     {
-                        if (ichilds[ci] != jchilds[ci])
-                        {
-                            isEquals = false;
+                        if (nodes[j].Char != nodes[i].Char)
                             break;
+
+                        if (nodes[j].Childs.Count != nodes[i].Childs.Count)
+                            break;
+
+                        var len = nodes[j].Childs.Count;
+                        var ichilds = nodes[i].Childs;
+                        var jchilds = nodes[j].Childs;
+                        for (var ci = 0; ci < len; ci++)
+                        {
+                            if (ichilds[ci] != jchilds[ci])
+                            {
+                                isEquals = false;
+                                break;
+                            }
                         }
                     }
 
@@ -401,9 +453,10 @@ namespace TestFileGenerator
                                 if (nodes[j].Parents.FindIndex(x => x == nodes[i].Parents[pi]) != -1)
                                     throw new Exception();
 #endif
-                                nodes[i].Parents[pi].Childs.Add(nodes[j]);
-                                nodes[j].Parents.Add(nodes[i].Parents[pi]);
-                                nodes[j].ParentsSorted = 0;
+                            nodes[i].Parents[pi].Childs.Add(nodes[j]);
+                            nodes[j].Parents.Capacity = Math.Max(nodes[j].Parents.Capacity, nodes[j].Parents.Count + nodes[i].Parents.Count);
+                            nodes[j].Parents.Add(nodes[i].Parents[pi]);
+                            nodes[j].ParentsSorted = false;
 #if DEBUG
                             }
                             else
@@ -411,14 +464,19 @@ namespace TestFileGenerator
 #endif
                         }
 
-                        nodes[i].deleted = 1;
+                        nodes[i].Deleted = true;
                         nodes[i] = null;
 
-                        int c = 0;
-                        while (merge(nodes[j])) c++;
+                        //while (merge(nodes[j])) ;
                         break;
                     }
                 }
+            }
+
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i] != null && !nodes[i].Deleted)
+                    while (mergeParents(nodes[i])) ;
             }
 
             if (mergesCount > 0)

@@ -63,7 +63,4 @@
   <ItemGroup>
     <None Include="makefile" />
   </ItemGroup>
-  <ItemGroup>
-    <Library Include="judy\Judy.lib" />
-  </ItemGroup>
 </Project>

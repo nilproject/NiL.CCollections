@@ -14,7 +14,6 @@
 #include "HashMap.h"
 #include "HashSet.h"
 #include "Utils.h"
-#include "judy/Judy.h"
 
 bool gotoxy(short x, short y)
 {
@@ -371,122 +370,40 @@ int main_bs()
 	getchar();
 }
 
-int main_judySl()
+struct Struct
 {
-	FILE *file = fopen("words.txt", "r");
-
-	if (file == NULL)
+	__int64 a;
+	char b;
+	union
 	{
-		printf("Unable to open file");
-		return 1;
-	}
+		int a;
+	} U, *UP;
+};
 
-	fpos_t fileSize;
-	fseek(file, 0, SEEK_END);
-	fgetpos(file, &fileSize);
-	fseek(file, 0, SEEK_SET);
+union Union
+{
+	long a;
+	int b;
+	char c;
+};
 
-	Pvoid_t set = 0;
-	PWord_t PValue = NULL;
-	Word_t Bytes;
-	char *line = NULL;
-	size_t linesAllocated = 150000;
-	char **lines = calloc(linesAllocated, sizeof(char*));
-	size_t linesCount = 0;
+void testf(int a[10])
+{
 
-	printf("Loading");
-
-	while (!feof(file))
-	{
-		printf("0\n");
-		
-		if (linesCount >= 1000)
-			break;
-
-		line = fgetline(file);
-		if (line == NULL)
-			break;
-
-		printf(line);
-		printf("1\n");
-		printf("1\n");
-		printf("1\n");
-		
-		JHSI(PValue, set, line, strlen(line));
-		
-		printf("2\n");
-
-		if (PValue == NULL || PValue == PJERR)
-		{
-			printf("\nERROR!");
-			getchar();
-			return 1;			
-		}
-		
-		printf("3\n");
-		
-		*PValue = linesCount;
-		
-		printf("4\n");
-		
-		lines[linesCount++] = line;
-		
-		printf("5\n");
-
-		PValue = NULL;
-		
-		//JHSG(PValue, set, line, strlen(line));
-		
-		//printf("i:%i\n", *PValue);
-
-		if (linesCount == linesAllocated)
-		{
-			lines = realloc(lines, (linesAllocated *= 2) * sizeof(char*));
-			if (lines == NULL)
-			{
-				printf("ahtung!");
-				getchar();
-				return 1;
-			}
-		}
-	}
-	
-	printf("OK!");
-	
-	fclose(file);
-
-	printf("\nNumber of lines: %zu", linesCount);
-
-#if _WIN32 || _WIN64
-	struct timeb bstart, bend;
-	ftime(&bstart);
-#endif
-	for (size_t i = 0; i < 1000; i++)
-	{
-		JHSG(PValue, set, lines[i], strlen(lines[i]));
-		if (PValue == PJERR || PValue == NULL || *PValue != i)
-		{
-			printf("\nERROR! %zu %zu", i, PValue);
-			getchar();
-			return 1;
-		}
-	}
-#if _WIN32 || _WIN64
-	ftime(&bend);
-	time_t time = (bend.time - bstart.time) * 1000 + bend.millitm - bstart.millitm;
-	printf("\nTime: %i (%f per line)", (int32_t)time, (float)time / (float)linesCount);
-#endif
-
-	free(lines);
-
-	printf("\nComplite");
-
-	getchar();
-
-	return 0;
 }
 
-int main()
+void main()
 {
-	return main_judySl();
+	int i[5] = { 0 };
+	testf(i);
+
+	struct Struct s;
+	s.a = sizeof s;
+	printf("%i %i\n", s.a, s.b);
+
+	union Union u;
+	u.a = 123;
+	printf("%i %i", u.b, u.c);
+	
+	getchar();
 }

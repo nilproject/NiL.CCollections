@@ -36,7 +36,8 @@ namespace TestFileGenerator
                 var stringBuilder = new StringBuilder();
                 var size = 0;
                 var count = 0;
-                var limit = 2 * 1024 * 1024;
+                var uncompressedSize = 0; 
+                var limit = 16 * 1024 * 1024;
                 var random = new Random(777);
                 var updated = Environment.TickCount;
                 var sw = Stopwatch.StartNew();
@@ -61,15 +62,21 @@ namespace TestFileGenerator
                         //writer.Write(word);
                         //writer.Write('\n');
                         size += len + 1;
+                        uncompressedSize += len + 1;
                         acceptorSize += len + 1;
                         strings.Add(word);
                         count++;
                     }
 
-                    if (words.Count % 10000 == 0)
+                    //if (words.Count % 500000 == 0)
+                    if (uncompressedSize >= (16 * 128 * 1024))
+                    //if (uncompressedSize >= 10000)
+                    {
                         words.Compress();
+                        uncompressedSize = 0;
+                    }
 
-                    //if (acceptorSize >= 24 * 128 * 1024)
+                    //if (acceptorSize >= 16 * 1024 * 1024)
                     //{
                     //    acceptorSize = 0;
                     //    words.Compress();
