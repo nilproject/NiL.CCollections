@@ -88,18 +88,18 @@ namespace TestFileGenerator
             if (item == null)
                 throw new ArgumentNullException();
 
-            var itemIndex = 0;
+            var keyCharIndex = 0;
             var nodeIndex = 0;
-            while (itemIndex < item.Length)
+            while (keyCharIndex < item.Length)
             {
-                while (_items[nodeIndex >> 1].Chars[nodeIndex & 1] != 0 && _items[nodeIndex >> 1].Chars[nodeIndex & 1] != item[itemIndex])
+                while (_items[nodeIndex >> 1].Chars[nodeIndex & 1] != 0 && _items[nodeIndex >> 1].Chars[nodeIndex & 1] != item[keyCharIndex])
                     nodeIndex++;
 
                 if (_items[nodeIndex >> 1].Chars[nodeIndex & 1] == 0)
                     return false;
 
                 nodeIndex = _items[nodeIndex >> 1].ChildsIndex[nodeIndex & 1];
-                itemIndex++;
+                keyCharIndex++;
             }
 
             while (_items[nodeIndex >> 1].Chars[nodeIndex & 1] != 0)
@@ -120,7 +120,35 @@ namespace TestFileGenerator
 
         public IEnumerator<string> GetEnumerator()
         {
-            throw new NotImplementedException();
+            if (_count == 0)
+                yield break;
+
+            var stack = new Stack<int>();
+            var result = new StringBuilder();
+
+            stack.Push(0);
+            do
+            {
+                var nodeIndex = stack.Pop();
+
+                if (_items[nodeIndex >> 1].ChildsIndex[nodeIndex & 1] == -1)
+                {
+                    yield return result.ToString();
+                    nodeIndex++;
+                }
+
+                if (_items[nodeIndex >> 1].Chars[nodeIndex & 1] != 0)
+                {
+                    result.Append(_items[nodeIndex >> 1].Chars[nodeIndex & 1]);
+                    stack.Push(nodeIndex + 1);
+                    stack.Push(_items[nodeIndex >> 1].ChildsIndex[nodeIndex & 1]);
+                    continue;
+                }
+
+                if (result.Length > 0)
+                    result.Length--;
+            }
+            while (stack.Count != 0);
         }
 
         public void IntersectWith(IEnumerable<string> other)

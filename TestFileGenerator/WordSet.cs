@@ -83,8 +83,8 @@ namespace TestFileGenerator
         private _Node _root;
         private _Node _final;
         private int _count;
-        private int _statesCount;
-        private bool frozen;
+        private int _nodesCount;
+        private bool _frozen;
 
         public int FinalStateParentsCount => _final.Parents.Count;
 
@@ -112,7 +112,7 @@ namespace TestFileGenerator
 
         public void Freeze()
         {
-            if (frozen)
+            if (_frozen)
                 return;
 
             Action<_Node> freeze = null;
@@ -124,7 +124,7 @@ namespace TestFileGenerator
                 node.Parents = null;
             };
 
-            frozen = true;
+            _frozen = true;
         }
 
         public void Compress()
@@ -135,7 +135,7 @@ namespace TestFileGenerator
 
         public Acceptor GetAcceptor()
         {
-            var items = new Acceptor.Item[(_statesCount >> 1) + _count];
+            var items = new Acceptor.Item[(_nodesCount >> 1) + _count];
             var allocatedItems = 0;
             var maxIndex = 0;
             var acceptorPositions = new Dictionary<_Node, int>();
@@ -193,7 +193,7 @@ namespace TestFileGenerator
             if (maxIndex + 2 != items.Length)
             {
                 var newItems = new Acceptor.Item[maxIndex + 2];
-                Array.Copy(items, newItems, newItems.Length);
+                Array.Copy(items, newItems, Math.Min(newItems.Length, items.Length));
                 items = newItems;
             }
 
@@ -205,8 +205,11 @@ namespace TestFileGenerator
             if (item == null)
                 throw new ArgumentNullException();
 
-            if (frozen)
+            if (_frozen)
                 throw new InvalidOperationException();
+
+            //if (Contains(item))
+            //    return false;
 
             splitIfNeed(item);
 
@@ -251,7 +254,7 @@ namespace TestFileGenerator
 
                     node = new _Node(item[i], node);
 
-                    _statesCount++;
+                    _nodesCount++;
                     nodes++;
                 }
                 else
@@ -328,7 +331,7 @@ namespace TestFileGenerator
                 if (child.Parents.Count > 1)
                 {
                     splits++;
-                    _statesCount++;
+                    _nodesCount++;
 
                     child.Parents.RemoveAt(child.Parents.IndexOf(node));
                     node.Childs.RemoveAt(node.Childs.IndexOf(child));
@@ -427,7 +430,7 @@ namespace TestFileGenerator
                     if (isEquals)
                     {
                         merges++;
-                        _statesCount--;
+                        _nodesCount--;
                         mergesCount++;
                         result = true;
 
@@ -544,8 +547,9 @@ namespace TestFileGenerator
 
         public void Clear()
         {
-            _statesCount = 2;
+            _nodesCount = 2;
             _count = 0;
+            _frozen = false;
             _root.Childs.Clear();
             _final.Parents?.Clear();
             _final.Childs?.Clear(); // о_О Такое возможно, так как в .NET строки могут содержать символ \0 не только в конце

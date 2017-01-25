@@ -147,7 +147,6 @@
     <ClInclude Include="WordSet.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="getopt.c" />
     <ClCompile Include="HashMap.c" />
     <ClCompile Include="HashSet.c" />
     <ClCompile Include="main.c" />

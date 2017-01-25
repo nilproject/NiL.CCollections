@@ -18,7 +18,7 @@
 bool gotoxy(short x, short y)
 {
 #if _WIN32 || _WIN64
-	COORD coord = { .X = x,.Y = y };
+	COORD coord = { .X = x, .Y = y };
 	return SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 #else
 	printf("%c[%d;%df", 0x1B, y, x);
@@ -370,40 +370,6 @@ int main_bs()
 	getchar();
 }
 
-struct Struct
-{
-	__int64 a;
-	char b;
-	union
-	{
-		int a;
-	} U, *UP;
-};
-
-union Union
-{
-	long a;
-	int b;
-	char c;
-};
-
-void testf(int a[10])
-{
-
-}
-
 void main()
 {
-	int i[5] = { 0 };
-	testf(i);
-
-	struct Struct s;
-	s.a = sizeof s;
-	printf("%i %i\n", s.a, s.b);
-
-	union Union u;
-	u.a = 123;
-	printf("%i %i", u.b, u.c);
-	
-	getchar();
 }
