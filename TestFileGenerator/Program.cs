@@ -13,7 +13,81 @@ namespace TestFileGenerator
     {
         static void Main(string[] args)
         {
-            simpleList();
+            sort();
+        }
+
+        private static void comparerPerformance()
+        {
+            var repeatCount = 100000000;
+
+            var sw = Stopwatch.StartNew();
+            for (var i = 0; i < repeatCount; i++)
+            {
+                i.CompareTo(10);
+            }
+            sw.Stop();
+            Console.WriteLine(new TimeSpan(sw.ElapsedTicks / repeatCount));
+            Console.WriteLine(sw.Elapsed);
+
+            sw.Restart();
+            for (var i = 0; i < repeatCount; i++)
+            {
+                var temp = i - 10;
+            }
+            sw.Stop();
+            Console.WriteLine(new TimeSpan(sw.ElapsedTicks / repeatCount));
+            Console.WriteLine(sw.Elapsed);
+        }
+
+        private static void sort()
+        {
+            var maxValue = 100;
+            var array = new int[1 << 12];
+            var random = new Random(0x777);
+            var repeatCount = 1000;
+
+            var sw = new Stopwatch();
+            for (var i = 0; i < repeatCount; i++)
+            {
+                for (var j = 0; j < array.Length; j++)
+                    array[j] = random.Next(maxValue);
+
+                //if (i >= 2)
+                {
+                    sw.Start();
+                    array.ShellSort();
+                    sw.Stop();
+
+                    //validateSort(array);
+                }
+            }
+            sw.Stop();
+            Console.WriteLine(new TimeSpan(sw.ElapsedTicks / repeatCount));
+            Console.WriteLine(sw.Elapsed);
+
+            random = new Random(0x777);
+            sw.Reset();
+            for (var i = 0; i < repeatCount; i++)
+            {
+                for (var j = 0; j < array.Length; j++)
+                    array[j] = random.Next(maxValue);
+
+                sw.Start();
+                Array.Sort(array);
+                sw.Stop();
+            }
+            sw.Stop();
+            Console.WriteLine(new TimeSpan(sw.ElapsedTicks / repeatCount));
+            Console.WriteLine(sw.Elapsed);
+        }
+
+        private static void validateSort(int[] array)
+        {
+            for (var i = 1; i < array.Length; i++)
+            {
+                if (array[i - 1] > array[i])
+                    Debugger.Break();
+            }
         }
 
         private static void simpleList()
@@ -23,43 +97,50 @@ namespace TestFileGenerator
             var size = 0;
             var count = 0;
             var uncompressedSize = 0;
-            var limit = 32 * 1024 * 1024;
+            var limit = 128 * 1024 * 1024;
             var random = new Random(777);
             var updated = Environment.TickCount;
             var sw = Stopwatch.StartNew();
 
-            while (size <= limit)
+            using (var file = new FileStream("words.txt", FileMode.Create))
+            using (var writer = new StreamWriter(file))
             {
-                var len = random.Next(10) + 3;
-
-                for (var i = 0; i < len; i++)
+                while (size <= limit)
                 {
-                    stringBuilder.Append((char)(random.Next(128 - 32) + 32));
+                    var len = random.Next(10) + 3;
+
+                    for (var i = 0; i < len; i++)
+                    {
+                        stringBuilder.Append((char)(random.Next(128 - 32) + 32));
+                    }
+
+                    var word = stringBuilder.ToString();
+                    if (word.Length < 3)
+                        System.Diagnostics.Debugger.Break();
+
+                    stringBuilder.Clear();
+
+                    if (words.Add(word))
+                    {
+                        writer.Write(word);
+                        writer.Write('\n');
+                        size += len + 1;
+                        uncompressedSize += len + 1;
+                        count++;
+                    }
+
+                    if (Environment.TickCount - updated > 500)
+                    {
+                        updated = Environment.TickCount;
+                        Console.SetCursorPosition(0, 0);
+                        Console.Write(((float)size / limit).ToString("0.00000"));
+                    }
                 }
 
-                var word = stringBuilder.ToString();
-                stringBuilder.Clear();
-
-                if (words.Add(word))
-                {
-                    //writer.Write(word);
-                    //writer.Write('\n');
-                    size += len + 1;
-                    uncompressedSize += len + 1;
-                    count++;
-                }
-
-                if (Environment.TickCount - updated > 500)
-                {
-                    updated = Environment.TickCount;
-                    Console.SetCursorPosition(0, 0);
-                    Console.Write(((float)size / limit).ToString("0.00000"));
-                }
+                sw.Stop();
+                Console.WriteLine();
+                Console.WriteLine(sw.Elapsed);
             }
-
-            sw.Stop();
-            Console.WriteLine();
-            Console.WriteLine(sw.Elapsed);
 
             sw.Restart();
             var wordList = words.ToArray();
