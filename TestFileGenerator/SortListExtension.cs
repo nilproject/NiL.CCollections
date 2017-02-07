@@ -5,6 +5,61 @@ namespace TestFileGenerator
 {
     public static class SortListExtension
     {
+        public static void QuickSort<T>(this IList<T> list) where T : IComparable<T>
+        {
+            quickSort(list, 0, list.Count - 1, 1, Comparer<T>.Default);
+        }
+
+        private static void quickSort<T>(IList<T> list, int start, int end, int currentStackDepth, Comparer<T> comparer) where T : IComparable<T>
+        {
+            var left = start + 1;
+            var right = end;
+
+            if (left > right)
+                return;
+
+            var main = list[start];
+            T temp;
+            while (left < right)
+            {
+                while (left < right && comparer.Compare(list[left], main) <= 0)
+                    left++;
+
+                while (left < right && comparer.Compare(list[right], main) >= 0)
+                    right--;
+
+                if (left < right)
+                {
+                    temp = list[left];
+                    list[left] = list[right];
+                    list[right] = temp;
+
+                    left++;
+                    right--;
+                }
+            }
+
+            var cmp = comparer.Compare(main, list[left]);
+
+            if (cmp > 0)
+            {
+                list[start] = list[left];
+                list[left] = main;
+            }
+
+            left--;
+
+            if (left - start > 0)
+            {
+                quickSort(list, start, left, currentStackDepth + 1, comparer);
+            }
+
+            if (end - right > 0)
+            {
+                quickSort(list, right, end, currentStackDepth + 1, comparer);
+            }
+        }
+
         public static void InPlaceMergeSort<T>(this IList<T> list) where T : IComparable<T>
         {
             for (var partLen = 2; partLen <= list.Count; partLen *= 2)
@@ -12,13 +67,14 @@ namespace TestFileGenerator
                 for (var part = 0; part < list.Count / partLen; part++)
                 {
                     var prewPartLen = partLen / 2;
+                    var partStart = part * partLen;
                     if (partLen == 2)
                     {
-                        if (list[part * partLen].CompareTo(list[prewPartLen + part * partLen]) > 0)
+                        if (list[partStart].CompareTo(list[prewPartLen + partStart]) > 0)
                         {
-                            var temp = list[part * partLen];
-                            list[part * partLen] = list[prewPartLen + part * partLen];
-                            list[prewPartLen + part * partLen] = temp;
+                            var temp = list[partStart];
+                            list[partStart] = list[prewPartLen + partStart];
+                            list[prewPartLen + partStart] = temp;
                         }
                     }
                     else
@@ -36,25 +92,25 @@ namespace TestFileGenerator
                             {
                                 if (relocatedIndex > 0)
                                 {
-                                    var cmp = list[relocatedIndex + part * partLen].CompareTo(list[j + part * partLen]);
+                                    var cmp = list[relocatedIndex + partStart].CompareTo(list[j + partStart]);
                                     if (cmp <= 0)
                                     {
-                                        temp = list[i + part * partLen];
-                                        list[i + part * partLen] = list[relocatedIndex + part * partLen];
-                                        list[relocatedIndex + part * partLen] = temp;
+                                        temp = list[i + partStart];
+                                        list[i + partStart] = list[relocatedIndex + partStart];
+                                        list[relocatedIndex + partStart] = temp;
 
-                                        for (var k = 0; k < relocatedCount - 1; k++)
+                                        for (var k = 1; k < relocatedCount; k++)
                                         {
-                                            temp = list[k + relocatedIndex + part * partLen];
-                                            list[k + relocatedIndex + part * partLen] = list[k + 1 + relocatedIndex + part * partLen];
-                                            list[k + 1 + relocatedIndex + part * partLen] = temp;
+                                            temp = list[k + relocatedIndex + partStart];
+                                            list[k + relocatedIndex + partStart] = list[k - 1 + relocatedIndex + partStart];
+                                            list[k - 1 + relocatedIndex + partStart] = temp;
                                         }
                                     }
                                     else if (cmp > 0)
                                     {
-                                        temp = list[i + part * partLen];
-                                        list[i + part * partLen] = list[j + part * partLen];
-                                        list[j + part * partLen] = temp;
+                                        temp = list[i + partStart];
+                                        list[i + partStart] = list[j + partStart];
+                                        list[j + partStart] = temp;
 
                                         relocatedCount++;
                                         j++;
@@ -62,12 +118,12 @@ namespace TestFileGenerator
                                 }
                                 else
                                 {
-                                    var cmp = list[i + part * partLen].CompareTo(list[j + part * partLen]);
+                                    var cmp = list[i + partStart].CompareTo(list[j + partStart]);
                                     if (cmp > 0)
                                     {
-                                        temp = list[i + part * partLen];
-                                        list[i + part * partLen] = list[j + part * partLen];
-                                        list[j + part * partLen] = temp;
+                                        temp = list[i + partStart];
+                                        list[i + partStart] = list[j + partStart];
+                                        list[j + partStart] = temp;
 
                                         relocatedIndex = j;
                                         relocatedCount++;
@@ -78,6 +134,27 @@ namespace TestFileGenerator
 
                             if (j == partLen)
                             {
+                                /*while (j == partLen)
+                                {
+                                    j = prewPartLen;
+                                    for (var k = 0; k < relocatedCount && i < j; k++)
+                                    //while (i < partLen - 1)
+                                    {
+                                        temp = list[i + partStart];
+                                        list[i + partStart] = list[j + partStart];
+                                        list[j + partStart] = temp;
+
+                                        i++;
+                                        j++;
+                                        //if (i == prewPartLen)
+                                        //    prewPartLen = i + 1;
+                                        //if (j == partLen)
+                                        //    j = prewPartLen;
+                                    }
+                                }
+
+                                break;*/
+
                                 relocatedIndex = i;
                                 continue;
                             }

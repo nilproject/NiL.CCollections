@@ -41,7 +41,7 @@ namespace TestFileGenerator
 
         private static void sort()
         {
-            var maxValue = 100;
+            var maxValue = int.MaxValue;
             var array = new int[1 << 12];
             var random = new Random(0x777);
             var repeatCount = 1000;
@@ -52,10 +52,10 @@ namespace TestFileGenerator
                 for (var j = 0; j < array.Length; j++)
                     array[j] = random.Next(maxValue);
 
-                //if (i >= 2)
+                //if (i >= 78)
                 {
                     sw.Start();
-                    array.ShellSort();
+                    array.QuickSort();
                     sw.Stop();
 
                     //validateSort(array);
