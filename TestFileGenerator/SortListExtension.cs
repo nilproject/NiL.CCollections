@@ -18,8 +18,11 @@ namespace TestFileGenerator
             if (left > right)
                 return;
 
+            var temp = list[left];
+            list[left] = list[left + (right - left) / 2];
+            list[left + (right - left) / 2] = temp;
+
             var main = list[start];
-            T temp;
             while (left < right)
             {
                 while (left < right && comparer.Compare(list[left], main) <= 0)
